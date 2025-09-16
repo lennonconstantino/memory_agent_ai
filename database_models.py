@@ -117,7 +117,7 @@ class KnowledgeBase(Base):
 class DatabaseManager:
     """Gerenciador de conexão e operações com banco de dados"""
     
-    def __init__(self, database_url: str = "sqlite:///ai_memory.db"):
+    def __init__(self, database_url: str = "sqlite:///memory.db"):
         self.database_url = database_url
         self.engine = create_engine(database_url, echo=False)
         self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
