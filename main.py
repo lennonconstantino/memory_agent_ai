@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 # Importa tanto as versões antigas quanto as novas para comparação
 from memory import TestMemoryAgent
-from database_models import DatabaseManager
+from db import DatabaseConfig
 
 _ = load_dotenv()  # força a execução
 
@@ -123,7 +123,7 @@ async def test_database_operations():
     print("=== TESTE DE OPERAÇÕES DO BANCO DE DADOS ===\n")
     
     # Cria gerenciador de banco
-    db = DatabaseManager("sqlite:///test_operations.db")
+    db = DatabaseConfig("sqlite:///test_operations.db")
     
     test_user_id = "test_user_db"
     

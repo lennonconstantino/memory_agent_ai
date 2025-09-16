@@ -5,8 +5,9 @@ from typing import Dict, List
 import openai
 from dotenv import load_dotenv
 
-from database_models import DatabaseManager
+from db import DatabaseConfig
 from prompt import get_create_system_message, get_extract_system_message
+from repository import MemoryRepository
 
 _ = load_dotenv()  # força a execução
 
@@ -21,7 +22,8 @@ class DBMemoryAgent:
         self.max_tokens = max_tokens
         
         # Gerenciador de banco de dados
-        self.db = DatabaseManager(database_url)
+        self.db = DatabaseConfig(database_url)
+        self.repository = MemoryRepository(self.db)
         
         # Memória de Curto Prazo - Contexto atual da conversa (ainda em memória para performance)
         self.conversation_history = deque(maxlen=short_term_limit)
@@ -45,19 +47,19 @@ class DBMemoryAgent:
         self.conversation_history.append(message)
         
         # Persiste no banco de dados
-        self.db.add_message(user_id, role, content, metadata)
+        self.repository.add_message(user_id, role, content, metadata)
         
         # Verifica se precisa consolidar conhecimento
         if len([msg for msg in self.conversation_history if msg["user_id"] == user_id]) >= self.consolidation_threshold:
             self._extract_and_consolidate_information(user_id)
         
         # Cria resumo se conversa ficar muito longa
-        if self.db.get_message_count(user_id) >= self.summary_trigger:
+        if self.repository.get_message_count(user_id) >= self.summary_trigger:
             self._create_conversation_summary(user_id)
             
         # Limpa mensagens antigas se necessário
-        if self.db.get_message_count(user_id) > self.max_messages_per_user:
-            deleted = self.db.cleanup_old_messages(user_id, keep_last=self.max_messages_per_user // 2)
+        if self.repository.get_message_count(user_id) > self.max_messages_per_user:
+            deleted = self.repository.cleanup_old_messages(user_id, keep_last=self.max_messages_per_user // 2)
             print(f"🗑️ Removed {deleted} old messages for user {user_id}")
 
     def _extract_and_consolidate_information(self, user_id: str):
@@ -93,7 +95,7 @@ class DBMemoryAgent:
                 user_info = {k: v for k, v in user_info.items() if v}
                 
                 if user_info:  # Só atualiza se tiver informações
-                    self.db.update_user_profile(user_id, user_info)
+                    self.repository.update_user_profile(user_id, user_info)
                     print(f" User profile {user_id} updated: {user_info}")
                     
             except json.JSONDecodeError:
@@ -105,7 +107,7 @@ class DBMemoryAgent:
     def _create_conversation_summary(self, user_id: str):
         """Cria resumo da conversa atual e limpa parte da memória de curto prazo"""
         # Busca mensagens recentes do usuário no banco
-        recent_messages = self.db.get_recent_messages(user_id, limit=20)
+        recent_messages = self.repository.get_recent_messages(user_id, limit=20)
         
         if len(recent_messages) < 3:
             return
@@ -127,7 +129,7 @@ class DBMemoryAgent:
             summary = response.choices[0].message.content
             
             # Armazena o resumo no banco
-            self.db.add_conversation_summary(user_id, summary, len(recent_messages))
+            self.repository.add_conversation_summary(user_id, summary, len(recent_messages))
             
             print(f" Conversation summary created for user {user_id}")
             
@@ -157,11 +159,11 @@ class DBMemoryAgent:
 
     def get_user_profile(self, user_id: str) -> Dict:
         """Retorna o perfil completo do usuário"""
-        return self.db.get_user_profile_dict(user_id)
+        return self.repository.get_user_profile_dict(user_id)
     
     def get_conversation_summaries(self, user_id: str, limit: int = 5) -> List[str]:
         """Retorna resumos de conversas do usuário"""
-        return self.db.get_conversation_summaries(user_id, limit)
+        return self.repository.get_conversation_summaries(user_id, limit)
 
 class TestDBMemoryAgent:
     """Versão de teste com SQLAlchemy"""
@@ -237,7 +239,7 @@ class TestDBMemoryAgent:
                                   if msg["user_id"] == user_id]
         
         if len(user_messages_in_memory) < 2:
-            recent_db_messages = self.memory_agent.db.get_recent_messages(user_id, limit=5)
+            recent_db_messages = self.memory_agent.repository.get_recent_messages(user_id, limit=5)
             for msg in recent_db_messages:
                 # Evita duplicar mensagens que já estão na memória
                 if not any(m["content"] == msg["content"] and m["role"] == msg["role"] 
