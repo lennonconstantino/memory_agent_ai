@@ -106,6 +106,229 @@ CREATE TABLE knowledge_base (
 );
 ```
 
+### 📋 Explicação Detalhada das Tabelas
+
+#### 🧑‍💼 **UserProfile** - Perfis de Usuários
+**Para que serve:** Armazena informações personalizadas e contexto de cada usuário individual.
+
+**Campos principais:**
+- `id`: Identificador único do usuário (chave primária)
+- `name`: Nome do usuário (extraído automaticamente das conversas)
+- `interests`: Lista de interesses em formato JSON (ex: `["programação", "música", "viagem"]`)
+- `preferences`: Preferências de comunicação (ex: "respostas técnicas detalhadas")
+- `context`: Contexto relevante sobre o usuário (ex: "estudante de engenharia")
+- `first_interaction` / `last_interaction`: Controle temporal das interações
+
+**Como é usado:**
+- ✅ **Personalização**: Respostas adaptadas ao perfil do usuário
+- ✅ **Contexto persistente**: Lembra informações entre sessões
+- ✅ **Extração automática**: IA identifica e armazena dados relevantes
+- ✅ **Relacionamentos**: Conecta com mensagens e resumos
+
+**Exemplo de uso:**
+```python
+# Perfil criado automaticamente
+profile = {
+    "name": "Maria Silva",
+    "interests": ["Python", "Machine Learning", "Data Science"],
+    "preferences": "Explicações técnicas detalhadas",
+    "context": "Desenvolvedora com 3 anos de experiência"
+}
+```
+
+#### 💬 **Message** - Histórico de Mensagens
+**Para que serve:** Armazena todo o histórico de conversas entre usuários e o assistente.
+
+**Campos principais:**
+- `id`: Identificador único da mensagem (auto increment)
+- `user_id`: Referência ao usuário (chave estrangeira)
+- `role`: Tipo de mensagem (`user`, `assistant`, `system`)
+- `content`: Conteúdo da mensagem
+- `timestamp`: Quando a mensagem foi enviada
+- `metadata`: Dados extras em JSON (ex: sentimento, tópicos, etc.)
+
+**Como é usado:**
+- ✅ **Histórico completo**: Todas as conversas ficam salvas
+- ✅ **Contexto imediato**: Últimas mensagens para respostas
+- ✅ **Análise temporal**: Padrões de conversa ao longo do tempo
+- ✅ **Auditoria**: Rastreamento completo das interações
+
+**Exemplo de uso:**
+```python
+# Mensagem salva automaticamente
+message = {
+    "user_id": "user_123",
+    "role": "user",
+    "content": "Como implementar machine learning em Python?",
+    "timestamp": "2024-01-15 14:30:00",
+    "metadata": {"sentiment": "curious", "topic": "ml"}
+}
+```
+
+#### 📄 **ConversationSummary** - Resumos de Conversas
+**Para que serve:** Resumos inteligentes de conversas longas para manter contexto sem sobrecarregar o sistema.
+
+**Campos principais:**
+- `id`: Identificador único do resumo
+- `user_id`: Referência ao usuário
+- `summary`: Resumo gerado pela IA das conversas
+- `created_at`: Quando o resumo foi criado
+- `message_count`: Quantas mensagens foram resumidas
+
+**Como é usado:**
+- ✅ **Otimização de performance**: Evita usar todas as mensagens como contexto
+- ✅ **Preservação de contexto**: Informações importantes não se perdem
+- ✅ **Economia de tokens**: Reduz custos da API OpenAI
+- ✅ **Escalabilidade**: Suporta conversas muito longas
+
+**Exemplo de resumo:**
+```
+"Maria é uma desenvolvedora Python interessada em machine learning e data science. 
+Ela tem 3 anos de experiência e prefere explicações técnicas detalhadas. 
+Na conversa atual, discutimos implementação de algoritmos de classificação 
+usando scikit-learn e TensorFlow."
+```
+
+#### 🧠 **KnowledgeBase** - Base de Conhecimento Geral
+**Para que serve:** Armazena conhecimento compartilhado e informações gerais que não são específicas de usuários.
+
+**Campos principais:**
+- `id`: Identificador único do conhecimento
+- `key`: Chave única para identificar o conhecimento (ex: "python_basics")
+- `value`: Conteúdo do conhecimento
+- `category`: Categoria para organização (ex: "programming", "company", "faq")
+- `created_at` / `updated_at`: Controle temporal
+
+**Como é usado:**
+- ✅ **FAQ da empresa**: Perguntas e respostas frequentes
+- ✅ **Políticas**: Regras e diretrizes da organização
+- ✅ **Dicas técnicas**: Conhecimento técnico compartilhado
+- ✅ **Procedimentos**: Passo a passo de processos
+- ✅ **Informações gerais**: Dados acessíveis por todos os usuários
+
+**Exemplo de uso:**
+```python
+# Conhecimento adicionado
+knowledge = {
+    "key": "python_best_practices",
+    "value": "Sempre use type hints e docstrings em Python para melhor legibilidade",
+    "category": "programming"
+}
+```
+
+### 🔄 Relacionamentos entre Tabelas
+
+```mermaid
+erDiagram
+    UserProfile ||--o{ Message : "tem"
+    UserProfile ||--o{ ConversationSummary : "possui"
+    
+    UserProfile {
+        string id PK
+        string name
+        string interests
+        string preferences
+        string context
+        datetime first_interaction
+        datetime last_interaction
+        datetime created_at
+        datetime updated_at
+    }
+    
+    Message {
+        int id PK
+        string user_id FK
+        string role
+        text content
+        datetime timestamp
+        text metadata
+    }
+    
+    ConversationSummary {
+        int id PK
+        string user_id FK
+        text summary
+        datetime created_at
+        int message_count
+    }
+    
+    KnowledgeBase {
+        int id PK
+        string key UK
+        text value
+        string category
+        datetime created_at
+        datetime updated_at
+    }
+```
+
+### 🎯 Casos de Uso Práticos
+
+#### **1. Sistema de Suporte ao Cliente**
+```python
+# Cenário: Cliente com problema técnico
+# UserProfile: Armazena histórico do cliente, preferências de atendimento
+# Message: Registra toda conversa de suporte
+# ConversationSummary: Resume problemas anteriores para contexto
+# KnowledgeBase: FAQ, procedimentos de suporte, soluções comuns
+```
+
+#### **2. Assistente Educacional**
+```python
+# Cenário: Estudante aprendendo programação
+# UserProfile: Nível de conhecimento, linguagens de interesse
+# Message: Perguntas e explicações durante as aulas
+# ConversationSummary: Resumo do progresso de aprendizado
+# KnowledgeBase: Conceitos de programação, exercícios, tutoriais
+```
+
+#### **3. Consultor de Negócios**
+```python
+# Cenário: Consultoria empresarial
+# UserProfile: Empresa do cliente, setor, necessidades
+# Message: Discussões sobre estratégias e implementações
+# ConversationSummary: Resumo de reuniões e decisões
+# KnowledgeBase: Metodologias, frameworks, cases de sucesso
+```
+
+#### **4. Chatbot de E-commerce**
+```python
+# Cenário: Loja online
+# UserProfile: Preferências de compra, histórico de pedidos
+# Message: Consultas sobre produtos e pedidos
+# ConversationSummary: Padrões de compra e preferências
+# KnowledgeBase: Catálogo de produtos, políticas da loja, FAQ
+```
+
+### ⚡ Fluxo de Funcionamento do Sistema
+
+```mermaid
+graph TD
+    A[Usuário envia mensagem] --> B[Sistema adiciona à Message]
+    B --> C[Atualiza UserProfile se necessário]
+    C --> D{Conversa tem 15+ mensagens?}
+    D -->|Sim| E[IA cria ConversationSummary]
+    D -->|Não| F[Usa contexto atual]
+    E --> G[Salva resumo no banco]
+    G --> H[Limpa mensagens antigas da memória]
+    H --> F
+    F --> I[Busca KnowledgeBase se necessário]
+    I --> J[Gera resposta com contexto completo]
+    J --> K[Salva resposta como Message]
+    K --> L[Retorna resposta ao usuário]
+```
+
+### 📊 Vantagens da Arquitetura
+
+| Aspecto | Benefício |
+|---------|-----------|
+| **Personalização** | Cada usuário tem perfil único e contexto preservado |
+| **Performance** | Resumos evitam sobrecarga com conversas longas |
+| **Escalabilidade** | Suporta milhares de usuários e mensagens |
+| **Flexibilidade** | KnowledgeBase permite conhecimento compartilhado |
+| **Auditoria** | Histórico completo de todas as interações |
+| **Inteligência** | IA extrai e consolida informações automaticamente |
+
 ## 🔧 Como Usar
 
 ### Uso Básico (Nova Versão SQLAlchemy)
@@ -176,6 +399,81 @@ recent_messages = db.get_recent_messages("user123", limit=10)
 summaries = db.get_conversation_summaries("user123")
 ```
 
+### 🧠 Trabalhando com KnowledgeBase
+
+```python
+from db import DatabaseConfig
+from repository import MemoryRepository
+
+# Configuração
+db_config = DatabaseConfig("sqlite:///minha_base.db")
+db = MemoryRepository(db_config)
+
+# Adicionar conhecimento individual
+db.add_knowledge(
+    key="python_tip",
+    value="Use list comprehensions para operações em listas",
+    category="programming"
+)
+
+# Geração de massa
+conhecimentos = [
+    {"key": "python_basics", "value": "Python é uma linguagem interpretada", "category": "programming"},
+    {"key": "company_policy", "value": "Horário de trabalho: 9h às 18h", "category": "company"},
+    {"key": "faq_what_is_ai", "value": "IA é a capacidade de máquinas executarem tarefas inteligentes", "category": "faq"}
+]
+
+added_count = db.bulk_add_knowledge(conhecimentos)
+print(f"Adicionados {added_count} conhecimentos")
+
+# Buscar conhecimento
+python_tip = db.get_knowledge("python_tip")
+print(f"Dica Python: {python_tip}")
+
+# Buscar por categoria
+programming_tips = db.get_knowledge_by_category("programming")
+print(f"Dicas de programação: {len(programming_tips)}")
+
+# Buscar por termo
+results = db.search_knowledge("Python")
+print(f"Resultados para 'Python': {len(results)}")
+
+# Atualizar conhecimento
+db.update_knowledge("python_tip", "Use list comprehensions para operações eficientes em listas")
+
+# Remover conhecimento
+db.delete_knowledge("python_tip")
+```
+
+### 📚 Exemplos de Conhecimento por Categoria
+
+#### **Programação**
+```python
+programming_knowledge = [
+    {"key": "python_functions", "value": "Funções em Python: def nome_funcao():", "category": "programming"},
+    {"key": "python_classes", "value": "Classes: class MinhaClasse: def __init__(self):", "category": "programming"},
+    {"key": "python_imports", "value": "Imports: import math ou from math import sqrt", "category": "programming"}
+]
+```
+
+#### **Empresa**
+```python
+company_knowledge = [
+    {"key": "company_mission", "value": "Nossa missão é inovar em tecnologia", "category": "company"},
+    {"key": "company_values", "value": "Valores: Inovação, Qualidade, Transparência", "category": "company"},
+    {"key": "company_contact", "value": "Contato: contato@empresa.com | (11) 99999-9999", "category": "company"}
+]
+```
+
+#### **FAQ**
+```python
+faq_knowledge = [
+    {"key": "faq_what_is_ml", "value": "Machine Learning permite que computadores aprendam sem programação explícita", "category": "faq"},
+    {"key": "faq_how_to_start", "value": "Para começar em IA: Python, matemática, estatística, machine learning", "category": "faq"},
+    {"key": "faq_ai_ethics", "value": "Ética em IA: transparência, justiça, responsabilidade", "category": "faq"}
+]
+```
+
 ## 🔄 Migração de Dados
 
 Se você tem dados na versão anterior (pickle), use o script de migração:
@@ -217,9 +515,18 @@ python main.py
 # Configure sua API key primeiro
 export OPENAI_API_KEY="sua_chave_aqui"
 
-# Descomente as linhas com chamadas reais da API em main.py
-# Depois execute:
-python main.py
+# Executa todos os testes incluindo KnowledgeBase
+python main.py complete
+```
+
+### Testes Específicos
+
+```bash
+# Teste apenas da KnowledgeBase (geração de massa)
+python main.py knowledge
+
+# Teste simples (chatbot básico)
+python main.py simple
 ```
 
 ### Testes Individuais
@@ -234,9 +541,45 @@ from main import test_long_conversation
 import asyncio
 asyncio.run(test_long_conversation())
 
-# Comparação entre versões
-from main import test_memory_comparison
-test_memory_comparison()
+# Teste da KnowledgeBase
+from main import test_knowledge_base_mass_generation
+import asyncio
+asyncio.run(test_knowledge_base_mass_generation())
+```
+
+### 🧠 Teste da KnowledgeBase
+
+O teste da KnowledgeBase demonstra todas as funcionalidades de geração de massa:
+
+```bash
+python main.py knowledge
+```
+
+**O que o teste faz:**
+- ✅ **Geração de massa** com 30 conhecimentos (programação, empresa, FAQ)
+- ✅ **Operações CRUD** completas (criar, ler, atualizar, deletar)
+- ✅ **Busca por termo** e categoria
+- ✅ **Teste de performance** com 100+ registros
+- ✅ **Validação de dados** inseridos
+- ✅ **Limpeza automática** de dados de teste
+
+**Resultado esperado:**
+```
+📚 Teste 1: Geração de massa - Dados de Programação
+   Conhecimentos de programação adicionados: 10
+
+🏢 Teste 2: Geração de massa - Dados da Empresa
+   Conhecimentos da empresa adicionados: 10
+
+❓ Teste 3: Geração de massa - FAQ
+   Conhecimentos de FAQ adicionados: 10
+
+🔍 Teste 4: Verificação de Dados Inseridos
+   Total de conhecimentos na base: 30
+
+⚡ Teste 7: Performance com Muitos Dados
+   Conhecimentos de performance adicionados: 100
+   Tempo de inserção: 0.01 segundos
 ```
 
 ## 📊 Performance e Otimizações

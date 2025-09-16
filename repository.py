@@ -5,7 +5,7 @@ from typing import Dict, List, Any
 import json
 
 from db import DatabaseConfig
-from models import Base, ConversationSummary, Message, UserProfile
+from models import Base, ConversationSummary, Message, UserProfile, KnowledgeBase
 
 class MemoryRepository:
     """Gerenciador de conexão e operações com banco de dados"""
@@ -198,3 +198,112 @@ class MemoryRepository:
         """Retorna número total de mensagens do usuário"""
         with self.get_session() as session:
             return session.query(Message).filter(Message.user_id == user_id).count()
+    
+    # ========== MÉTODOS PARA KNOWLEDGE BASE ==========
+    
+    def add_knowledge(self, key: str, value: str, category: str = None):
+        """Adiciona conhecimento à base geral"""
+        with self.get_session() as session:
+            # Verifica se já existe
+            existing = session.query(KnowledgeBase).filter(KnowledgeBase.key == key).first()
+            if existing:
+                # Atualiza se já existe
+                existing.value = value
+                existing.category = category
+                existing.updated_at = datetime.now()
+            else:
+                # Cria novo
+                knowledge = KnowledgeBase(
+                    key=key,
+                    value=value,
+                    category=category
+                )
+                session.add(knowledge)
+            session.commit()
+    
+    def get_knowledge(self, key: str) -> str:
+        """Busca conhecimento por chave"""
+        with self.get_session() as session:
+            kb = session.query(KnowledgeBase).filter(KnowledgeBase.key == key).first()
+            return kb.value if kb else None
+    
+    def get_knowledge_by_category(self, category: str) -> List[Dict]:
+        """Busca conhecimento por categoria"""
+        with self.get_session() as session:
+            kb_items = session.query(KnowledgeBase)\
+                             .filter(KnowledgeBase.category == category)\
+                             .all()
+            return [{"key": item.key, "value": item.value, "created_at": item.created_at} for item in kb_items]
+    
+    def update_knowledge(self, key: str, value: str, category: str = None):
+        """Atualiza conhecimento existente"""
+        with self.get_session() as session:
+            kb = session.query(KnowledgeBase).filter(KnowledgeBase.key == key).first()
+            if kb:
+                kb.value = value
+                if category:
+                    kb.category = category
+                kb.updated_at = datetime.now()
+                session.commit()
+                return True
+            return False
+    
+    def delete_knowledge(self, key: str) -> bool:
+        """Remove conhecimento da base"""
+        with self.get_session() as session:
+            kb = session.query(KnowledgeBase).filter(KnowledgeBase.key == key).first()
+            if kb:
+                session.delete(kb)
+                session.commit()
+                return True
+            return False
+    
+    def get_all_knowledge(self) -> List[Dict]:
+        """Retorna todo o conhecimento da base"""
+        with self.get_session() as session:
+            kb_items = session.query(KnowledgeBase).all()
+            return [{"key": item.key, "value": item.value, "category": item.category, 
+                    "created_at": item.created_at, "updated_at": item.updated_at} for item in kb_items]
+    
+    def search_knowledge(self, search_term: str) -> List[Dict]:
+        """Busca conhecimento por termo (busca em key, value e category)"""
+        with self.get_session() as session:
+            kb_items = session.query(KnowledgeBase)\
+                             .filter(
+                                 (KnowledgeBase.key.contains(search_term)) |
+                                 (KnowledgeBase.value.contains(search_term)) |
+                                 (KnowledgeBase.category.contains(search_term))
+                             ).all()
+            return [{"key": item.key, "value": item.value, "category": item.category} for item in kb_items]
+    
+    def bulk_add_knowledge(self, knowledge_items: List[Dict]) -> int:
+        """Adiciona múltiplos conhecimentos de uma vez"""
+        added_count = 0
+        with self.get_session() as session:
+            for item in knowledge_items:
+                key = item.get('key')
+                value = item.get('value')
+                category = item.get('category')
+                
+                if not key or not value:
+                    continue
+                
+                # Verifica se já existe
+                existing = session.query(KnowledgeBase).filter(KnowledgeBase.key == key).first()
+                if not existing:
+                    knowledge = KnowledgeBase(
+                        key=key,
+                        value=value,
+                        category=category
+                    )
+                    session.add(knowledge)
+                    added_count += 1
+                else:
+                    # Atualiza existente
+                    existing.value = value
+                    if category:
+                        existing.category = category
+                    existing.updated_at = datetime.now()
+            
+            session.commit()
+        return added_count
