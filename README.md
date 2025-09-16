@@ -18,7 +18,6 @@ Sistema avançado de memória para agentes de IA que mantém contexto e históri
 - 🆕 **Performance otimizada** para conversas longas
 - 🆕 **Limpeza automática** de mensagens antigas
 - 🆕 **Múltiplos resumos** por usuário com histórico
-- 🆕 **Migração de dados** do formato pickle
 - 🆕 **Testes abrangentes** incluindo casos extremos
 
 ## 🏗️ Arquitetura
@@ -38,14 +37,14 @@ Sistema avançado de memória para agentes de IA que mantém contexto e históri
 
 ```
 projeto/
-├── database_models.py      # 🆕 Modelos SQLAlchemy + DatabaseManager
-├── memory_sqlalchemy.py    # 🆕 Sistema de memória com SQLAlchemy
-├── migrate_pickle_to_db.py # 🆕 Script de migração de dados
-├── memory.py              # ✅ Sistema original (mantido)
-├── prompt.py              # ✅ Templates de prompts (mantido)
-├── main.py               # ✅ Testes originais (mantido + novos)
-├── requirements.txt      # 🆕 Dependências atualizadas
-└── README.md            # 🆕 Esta documentação
+├── db.py                 # Configuração do banco de dados
+├── models.py             # Modelos SQLAlchemy (UserProfile, Message, etc.)
+├── repository.py         # Gerenciador de operações com banco
+├── memory.py             # Sistema de memória com SQLAlchemy
+├── prompt.py             # Templates de prompts para IA
+├── main.py               # Testes e exemplos de uso
+├── requirements.txt      # Dependências do projeto
+└── README.md            # Esta documentação
 ```
 
 ## 🚀 Instalação
@@ -335,11 +334,11 @@ graph TD
 
 ```python
 import asyncio
-from memory_sqlalchemy import TestSQLAlchemyMemoryAgent
+from memory import TestMemoryAgent
 
 async def exemplo_basico():
     # Inicializa sistema com SQLAlchemy
-    memory_system = TestSQLAlchemyMemoryAgent(
+    memory_system = TestMemoryAgent(
         model="gpt-3.5-turbo",
         short_term_limit=10,
         database_url="sqlite:///minha_memoria.db"
@@ -366,22 +365,25 @@ asyncio.run(exemplo_basico())
 ### Compatibilidade com Versão Original
 
 ```python
-# A nova versão mantém compatibilidade total
-from memory_sqlalchemy import TestMemoryAgent  # Alias para compatibilidade
-from memory import TestMemoryAgent as Original  # Versão original
+# Sistema de memória com SQLAlchemy
+from memory import TestMemoryAgent
 
-# Ambas têm a mesma interface
-memory_new = TestMemoryAgent()  # SQLAlchemy version
-memory_old = Original()         # Pickle version
+# Inicializa sistema
+memory_system = TestMemoryAgent(
+    model="gpt-3.5-turbo",
+    database_url="sqlite:///memoria.db"
+)
 ```
 
 ### Operações Avançadas do Banco
 
 ```python
-from database_models import DatabaseManager
+from db import DatabaseConfig
+from repository import MemoryRepository
 
 # Acesso direto ao banco
-db = DatabaseManager("sqlite:///memoria.db")
+db_config = DatabaseConfig("sqlite:///memoria.db")
+db = MemoryRepository(db_config)
 
 # Operações manuais
 db.update_user_profile("user123", {
@@ -474,30 +476,20 @@ faq_knowledge = [
 ]
 ```
 
-## 🔄 Migração de Dados
+## 🔄 Inicialização do Banco
 
-Se você tem dados na versão anterior (pickle), use o script de migração:
+O banco de dados é criado automaticamente na primeira execução:
 
 ```python
-from migrate_pickle_to_db import migrate_pickle_to_sqlite
+from db import DatabaseConfig
+from repository import MemoryRepository
 
-# Migra arquivo pickle existente
-success = migrate_pickle_to_sqlite(
-    "ai_agent_memory.pkl",  # arquivo pickle
-    "sqlite:///memoria.db"  # banco destino
-)
+# Cria banco e tabelas automaticamente
+db_config = DatabaseConfig("sqlite:///memoria.db")
+db = MemoryRepository(db_config)
 
-if success:
-    print("Migração concluída com sucesso!")
-```
-
-### Teste de Migração
-
-```bash
-# Executa script completo de migração
-python migrate_pickle_to_db.py
-
-# Cria dados de exemplo e testa migração
+# Pronto! Todas as tabelas foram criadas
+print("Banco de dados inicializado com sucesso!")
 ```
 
 ## 🧪 Executar Testes
@@ -587,7 +579,7 @@ python main.py knowledge
 ### Configurações Recomendadas
 
 ```python
-memory_system = TestSQLAlchemyMemoryAgent(
+memory_system = TestMemoryAgent(
     model="gpt-3.5-turbo",
     short_term_limit=10,        # Mensagens em memória
     max_tokens=4000,            # Tokens por resposta
@@ -646,17 +638,17 @@ print(f"Resumos: {summaries}")
 
 ```python
 # PostgreSQL
-memory_system = TestSQLAlchemyMemoryAgent(
+memory_system = TestMemoryAgent(
     database_url="postgresql://user:pass@localhost/memoria"
 )
 
 # MySQL
-memory_system = TestSQLAlchemyMemoryAgent(
+memory_system = TestMemoryAgent(
     database_url="mysql://user:pass@localhost/memoria"
 )
 
 # SQLite com configurações específicas
-memory_system = TestSQLAlchemyMemoryAgent(
+memory_system = TestMemoryAgent(
     database_url="sqlite:///memoria.db?check_same_thread=False"
 )
 ```
@@ -677,7 +669,8 @@ from prompt import get_extract_system_message, get_create_system_message
 ```python
 # Erro: "no such table"
 # Solução: O banco é criado automaticamente na primeira execução
-db = DatabaseManager("sqlite:///novo_banco.db")  # Cria tabelas automaticamente
+db_config = DatabaseConfig("sqlite:///novo_banco.db")
+db = MemoryRepository(db_config)  # Cria tabelas automaticamente
 
 # Erro: "API key not found" 
 # Solução: Configure a variável de ambiente
@@ -737,9 +730,9 @@ Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para detalhes.
 
 ## 🏆 Comparação: Antes vs Depois
 
-| Aspecto | Versão Original (Pickle) | Nova Versão (SQLAlchemy) |
+| Aspecto | Versão Original | Nova Versão (SQLAlchemy) |
 |---------|-------------------------|--------------------------|
-| **Persistência** | Arquivo pickle | Banco SQLite |
+| **Persistência** | Memória temporária | Banco SQLite |
 | **Performance** | Carrega tudo na RAM | Híbrido: RAM + DB |
 | **Escalabilidade** | Limitada | Suporte a milhões de msgs |
 | **Consultas** | Linear (O(n)) | Indexadas (O(log n)) |
