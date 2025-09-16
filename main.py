@@ -65,7 +65,7 @@ async def exemplo_chatbot_sqlalchemy():
     memory_system = TestMemoryAgent(
         model="gpt-3.5-turbo",
         short_term_limit=8,
-        database_url="sqlite:///test_memory.db"
+        database_url="sqlite:///test_chat_memory.db"
     )
     
     # Simula uma conversa
