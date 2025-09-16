@@ -1,21 +1,20 @@
 from collections import deque
 from datetime import datetime
 import json
-from typing import Dict, List, Any
+from typing import Dict, List
 import openai
 from dotenv import load_dotenv
 
-from database_models import DatabaseManager, UserProfile, Message, ConversationSummary
+from database_models import DatabaseManager
 from prompt import get_create_system_message, get_extract_system_message
 
 _ = load_dotenv()  # força a execução
 
-
-class SQLAlchemyMemoryAgent:
+class DBMemoryAgent:
     """Sistema de memória usando SQLAlchemy para persistência"""
     
     def __init__(self, model: str = "gpt-3.5-turbo", short_term_limit: int = 10, 
-                 max_tokens: int = 4000, database_url: str = "sqlite:///ai_memory.db"):
+                 max_tokens: int = 4000, database_url: str = "sqlite:///memory.db"):
         # Configuração OpenAI
         self.client = openai.OpenAI()
         self.model = model
@@ -176,8 +175,7 @@ class SQLAlchemyMemoryAgent:
         if filename:
             print(f"   Note: SQLAlchemy version doesn't load from file '{filename}' - data comes from database")
 
-
-class TestSQLAlchemyMemoryAgent:
+class TestDBMemoryAgent:
     """Versão de teste com SQLAlchemy"""
     
     def __init__(self, model: str = "gpt-3.5-turbo", short_term_limit: int = 10, 
@@ -185,7 +183,7 @@ class TestSQLAlchemyMemoryAgent:
         self.model = model
         self.short_term_limit = short_term_limit
         self.max_tokens = max_tokens
-        self.memory_agent = SQLAlchemyMemoryAgent(
+        self.memory_agent = DBMemoryAgent(
             model=model, 
             short_term_limit=short_term_limit, 
             max_tokens=max_tokens,
@@ -296,12 +294,10 @@ PERFIL DO USUÁRIO:
         self.memory_agent.add_message(user_id, role, content, metadata)
 
 
-# Classes de compatibilidade com a versão original
-class MemoryAgent(SQLAlchemyMemoryAgent):
+class MemoryAgent(DBMemoryAgent):
     """Alias para compatibilidade"""
     pass
 
-
-class TestMemoryAgent(TestSQLAlchemyMemoryAgent):
+class TestMemoryAgent(TestDBMemoryAgent):
     """Alias para compatibilidade"""
     pass

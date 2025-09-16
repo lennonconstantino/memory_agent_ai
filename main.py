@@ -1,10 +1,9 @@
 import json
-import os
 import asyncio
 from dotenv import load_dotenv
 
 # Importa tanto as versões antigas quanto as novas para comparação
-from memory import TestSQLAlchemyMemoryAgent, TestMemoryAgent as OriginalTestMemoryAgent
+from memory import TestMemoryAgent as OriginalTestMemoryAgent, TestDBMemoryAgent
 from database_models import DatabaseManager
 
 _ = load_dotenv()  # força a execução
@@ -117,11 +116,6 @@ def exemplo_simples():
     profile = chatbot.memory.get_user_profile(user_id)
     print(f"📋 Perfil: {profile}")
 
-
-# =============================================================================
-# NOVOS TESTES COM SQLALCHEMY
-# =============================================================================
-
 async def exemplo_chatbot_sqlalchemy():
     """
     Demonstração prática de um chatbot com sistema de memória - VERSÃO SQLALCHEMY
@@ -130,7 +124,7 @@ async def exemplo_chatbot_sqlalchemy():
     print("=== CHATBOT COM SQLALCHEMY MEMORY SYSTEM ===\n")
     
     # Inicializa o sistema de memória SQLAlchemy
-    memory_system = TestSQLAlchemyMemoryAgent(
+    memory_system = TestDBMemoryAgent(
         model="gpt-3.5-turbo",
         short_term_limit=8,
         database_url="sqlite:///test_memory.db"
@@ -271,7 +265,7 @@ def test_memory_comparison():
     print("📊 Comparando funcionalidades básicas...")
     
     # Versão SQLAlchemy
-    sqlalchemy_agent = TestSQLAlchemyMemoryAgent(database_url="sqlite:///comparison_test.db")
+    sqlalchemy_agent = TestDBMemoryAgent(database_url="sqlite:///comparison_test.db")
     user_id = "comparison_user"
     
     # Adiciona algumas mensagens para teste
@@ -295,7 +289,7 @@ def test_memory_comparison():
     print(f"✅ SQLAlchemy - Dados persistidos automaticamente no banco")
     
     # Verifica se dados persistem após reinicialização
-    new_agent = TestSQLAlchemyMemoryAgent(database_url="sqlite:///comparison_test.db")
+    new_agent = TestDBMemoryAgent(database_url="sqlite:///comparison_test.db")
     persistent_profile = new_agent.get_user_profile(user_id)
     print(f"✅ SQLAlchemy - Dados recuperados após reinicialização: {persistent_profile is not None}")
 
@@ -307,7 +301,7 @@ async def test_long_conversation():
     print("\n" + "="*60)
     print("=== TESTE DE CONVERSA LONGA ===\n")
     
-    memory_system = TestSQLAlchemyMemoryAgent(
+    memory_system = TestDBMemoryAgent(
         short_term_limit=5,  # Limite baixo para forçar consolidação
         database_url="sqlite:///long_conversation_test.db"
     )
@@ -379,7 +373,7 @@ async def main():
     # Novos testes SQLAlchemy
     try:
         print("\n2️⃣ Executando testes SQLAlchemy...")
-        #await exemplo_chatbot_sqlalchemy()  # Descomentcar se tiver API key
+        await exemplo_chatbot_sqlalchemy()  # Descomentcar se tiver API key
         test_database_operations()
         test_memory_comparison()
         await test_long_conversation()
