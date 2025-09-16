@@ -94,13 +94,13 @@ class DBMemoryAgent:
                 
                 if user_info:  # Só atualiza se tiver informações
                     self.db.update_user_profile(user_id, user_info)
-                    print(f"📝 User profile {user_id} updated: {user_info}")
+                    print(f" User profile {user_id} updated: {user_info}")
                     
             except json.JSONDecodeError:
-                print(f"❌ Error parsing extracted information: {extracted_info}")
+                print(f" Error parsing extracted information: {extracted_info}")
                 
         except Exception as e:
-            print(f"❌ Error extracting information: {str(e)}")
+            print(f" Error extracting information: {str(e)}")
 
     def _create_conversation_summary(self, user_id: str):
         """Cria resumo da conversa atual e limpa parte da memória de curto prazo"""
@@ -129,13 +129,13 @@ class DBMemoryAgent:
             # Armazena o resumo no banco
             self.db.add_conversation_summary(user_id, summary, len(recent_messages))
             
-            print(f"📄 Conversation summary created for user {user_id}")
+            print(f" Conversation summary created for user {user_id}")
             
             # Limpa parte da memória de curto prazo
             self._compress_short_term_memory(user_id)
             
         except Exception as e:
-            print(f"❌ Error creating summary: {str(e)}")
+            print(f" Error creating summary: {str(e)}")
 
     def _compress_short_term_memory(self, user_id: str):
         """Remove mensagens antigas da memória de curto prazo, mantendo as mais recentes"""
@@ -162,24 +162,12 @@ class DBMemoryAgent:
     def get_conversation_summaries(self, user_id: str, limit: int = 5) -> List[str]:
         """Retorna resumos de conversas do usuário"""
         return self.db.get_conversation_summaries(user_id, limit)
-    
-    def save_memory(self, filename: str = None):
-        """Compatibilidade: dados já estão persistidos no banco"""
-        print(f"💾 Memory is automatically saved in database")
-        if filename:
-            print(f"   Note: SQLAlchemy version doesn't use file '{filename}' - data is in database")
-    
-    def load_memory(self, filename: str = None):
-        """Compatibilidade: dados são carregados automaticamente do banco"""
-        print(f"📂 Memory loaded from database automatically")
-        if filename:
-            print(f"   Note: SQLAlchemy version doesn't load from file '{filename}' - data comes from database")
 
 class TestDBMemoryAgent:
     """Versão de teste com SQLAlchemy"""
     
     def __init__(self, model: str = "gpt-3.5-turbo", short_term_limit: int = 10, 
-                 max_tokens: int = 4000, database_url: str = "sqlite:///test_ai_memory.db"):
+                 max_tokens: int = 4000, database_url: str = "sqlite:///test_memory.db"):
         self.model = model
         self.short_term_limit = short_term_limit
         self.max_tokens = max_tokens
@@ -284,10 +272,6 @@ PERFIL DO USUÁRIO:
     def get_user_profile(self, user_id: str) -> Dict:
         """Retorna perfil do usuário"""
         return self.memory_agent.get_user_profile(user_id)
-    
-    def save_memory(self, filename: str):
-        """Salva memória (compatibilidade)"""
-        self.memory_agent.save_memory(filename)
     
     def add_message(self, user_id: str, role: str, content: str, metadata: Dict = None):
         """Adiciona mensagem (para compatibilidade com testes antigos)"""

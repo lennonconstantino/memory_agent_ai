@@ -1,25 +1,22 @@
 import json
 import asyncio
+import sys
 from dotenv import load_dotenv
 
 # Importa tanto as versões antigas quanto as novas para comparação
-from memory import TestMemoryAgent as OriginalTestMemoryAgent, TestDBMemoryAgent
+from memory import TestMemoryAgent
 from database_models import DatabaseManager
 
 _ = load_dotenv()  # força a execução
 
 async def exemplo_chatbot_com_memoria():
     """
-    Demonstração prática de um chatbot com sistema de memória - VERSÃO ORIGINAL
+    Demonstração prática de um chatbot com sistema de memória
     """
-    if OriginalTestMemoryAgent is None:
-        print("⚠️ Pulando teste original - arquivo memory.py não encontrado")
-        return None
-        
-    print("=== CHATBOT COM SISTEMA DE MEMÓRIA (VERSÃO ORIGINAL) ===\n")
+    print("=== CHATBOT COM SISTEMA DE MEMÓRIA ===\n")
     
     # Inicializa o sistema de memória original
-    memory_system = OriginalTestMemoryAgent(
+    memory_system = TestMemoryAgent(
         model="gpt-3.5-turbo",
         short_term_limit=8
     )
@@ -55,66 +52,7 @@ async def exemplo_chatbot_com_memoria():
     profile = memory_system.get_user_profile(user_id)
     print(f"📋 Perfil consolidado: {json.dumps(profile, indent=2, default=str)}")
     
-    # Salva a memória
-    memory_system.save_memory("teste_original.pkl")
-    
     return memory_system
-
-class SimpleChatbot:
-    """
-    Versão simplificada para demonstração sem async - MANTIDA
-    """
-    def __init__(self, api_key: str):
-        if OriginalTestMemoryAgent is None:
-            # Fallback para versão SQLAlchemy se a original não estiver disponível
-            self.memory = TestMemoryAgent()
-        else:
-            self.memory = OriginalTestMemoryAgent(api_key)
-    
-    def chat(self, user_id: str, message: str) -> str:
-        """Versão síncrona do chat"""
-        # Simula uma resposta baseada na memória
-        self.memory.add_message(user_id, "user", message)
-        
-        # Resposta simulada (substitua pela chamada real da OpenAI)
-        if "nome" in message.lower() and "maria" in message.lower():
-            response = "Prazer em conhecê-la, Maria! Vou lembrar que você gosta de fotografia."
-        elif "câmera" in message.lower():
-            response = "Para iniciantes em fotografia, recomendo câmeras como Canon EOS Rebel ou Nikon D3500."
-        elif "hobby" in message.lower():
-            profile = self.memory.get_user_profile(user_id)
-            interests = profile.get("interests", ["fotografia"])  # Mudança aqui
-            response = f"Você mencionou que gosta de {', '.join(interests)}!"
-        else:
-            response = "Posso ajudá-la com algo relacionado à fotografia ou outros assuntos!"
-        
-        self.memory.add_message(user_id, "assistant", response)
-        return response
-
-def exemplo_simples():
-    """
-    Exemplo sem necessidade de API key real - MANTIDO
-    """
-    print("=== EXEMPLO SIMPLIFICADO (SEM API) ===\n")
-    
-    chatbot = SimpleChatbot("fake-api-key")
-    user_id = "user_456"
-    
-    # Simulação de conversa
-    messages = [
-        "Oi! Eu sou a Maria e adoro fotografia!",
-        "Pode me recomendar uma câmera boa?",
-        "Qual é mesmo o meu hobby favorito?",
-    ]
-    
-    for msg in messages:
-        print(f"👤 Usuário: {msg}")
-        response = chatbot.chat(user_id, msg)
-        print(f"🤖 Chatbot: {response}\n")
-    
-    # Mostra perfil
-    profile = chatbot.memory.get_user_profile(user_id)
-    print(f"📋 Perfil: {profile}")
 
 async def exemplo_chatbot_sqlalchemy():
     """
@@ -124,7 +62,7 @@ async def exemplo_chatbot_sqlalchemy():
     print("=== CHATBOT COM SQLALCHEMY MEMORY SYSTEM ===\n")
     
     # Inicializa o sistema de memória SQLAlchemy
-    memory_system = TestDBMemoryAgent(
+    memory_system = TestMemoryAgent(
         model="gpt-3.5-turbo",
         short_term_limit=8,
         database_url="sqlite:///test_memory.db"
@@ -174,13 +112,10 @@ async def exemplo_chatbot_sqlalchemy():
     if summaries:
         print(f"📄 Resumos de conversa: {summaries}")
     
-    # Testa persistência
-    memory_system.save_memory("teste_sqlalchemy.db")
-    
     return memory_system
 
 
-def test_database_operations():
+async def test_database_operations():
     """
     Testa operações específicas do banco de dados
     """
@@ -254,46 +189,6 @@ def test_database_operations():
     print("   ✅ Teste 4 passou\n")
 
 
-def test_memory_comparison():
-    """
-    Compara performance e funcionalidade entre versão original e SQLAlchemy
-    """
-    print("\n" + "="*60)
-    print("=== COMPARAÇÃO ENTRE VERSÕES ===\n")
-    
-    # Simulação simples sem API calls
-    print("📊 Comparando funcionalidades básicas...")
-    
-    # Versão SQLAlchemy
-    sqlalchemy_agent = TestDBMemoryAgent(database_url="sqlite:///comparison_test.db")
-    user_id = "comparison_user"
-    
-    # Adiciona algumas mensagens para teste
-    test_messages = [
-        ("user", "Meu nome é Carlos e eu trabalho com IA"),
-        ("assistant", "Olá Carlos! Interessante que trabalhe com IA. Que tipo de projetos desenvolve?"),
-        ("user", "Principalmente NLP e computer vision"),
-        ("assistant", "Áreas muito empolgantes! Tem experiência com transformers?")
-    ]
-    
-    for role, content in test_messages:
-        sqlalchemy_agent.add_message(user_id, role, content)
-    
-    # Força consolidação manual para teste
-    sqlalchemy_agent.memory_agent._extract_and_consolidate_information(user_id)
-    
-    profile_sql = sqlalchemy_agent.get_user_profile(user_id)
-    print(f"✅ SQLAlchemy - Perfil consolidado: {profile_sql}")
-    
-    # Testa persistência
-    print(f"✅ SQLAlchemy - Dados persistidos automaticamente no banco")
-    
-    # Verifica se dados persistem após reinicialização
-    new_agent = TestDBMemoryAgent(database_url="sqlite:///comparison_test.db")
-    persistent_profile = new_agent.get_user_profile(user_id)
-    print(f"✅ SQLAlchemy - Dados recuperados após reinicialização: {persistent_profile is not None}")
-
-
 async def test_long_conversation():
     """
     Testa comportamento com conversas longas
@@ -301,7 +196,7 @@ async def test_long_conversation():
     print("\n" + "="*60)
     print("=== TESTE DE CONVERSA LONGA ===\n")
     
-    memory_system = TestDBMemoryAgent(
+    memory_system = TestMemoryAgent(
         short_term_limit=5,  # Limite baixo para forçar consolidação
         database_url="sqlite:///long_conversation_test.db"
     )
@@ -352,46 +247,34 @@ async def test_long_conversation():
     print("   ✅ Teste de conversa longa concluído")
 
 
-# =============================================================================
-# FUNÇÃO PRINCIPAL
-# =============================================================================
-
-async def main():
-    """
-    Executa todos os testes
-    """
-    print("🚀 INICIANDO TESTES COMPLETOS\n")
-    
-    # Testes originais
+async def run_simple_tests():
     try:
-        print("1️⃣ Executando testes originais...")
-        exemplo_simples()
-        #await exemplo_chatbot_com_memoria()  # Descomentcar se tiver API key
+        print(" Executando testes")
+        await exemplo_chatbot_com_memoria()
     except Exception as e:
-        print(f"⚠️ Erro nos testes originais: {e}")
-    
-    # Novos testes SQLAlchemy
+        print(f"⚠️ Erro no teste simples: {e}")
+
+async def run_complete_tests():  
     try:
-        print("\n2️⃣ Executando testes SQLAlchemy...")
-        await exemplo_chatbot_sqlalchemy()  # Descomentcar se tiver API key
-        test_database_operations()
-        test_memory_comparison()
+        print("\n Executando testes completos ...")
+        await exemplo_chatbot_sqlalchemy() 
+        await test_database_operations()
         await test_long_conversation()
     except Exception as e:
-        print(f"⚠️ Erro nos testes SQLAlchemy: {e}")
-    
-    print("\n🎉 TODOS OS TESTES CONCLUÍDOS!")
-    print("📁 Arquivos de banco criados:")
-    print("   - test_memory.db")
-    print("   - test_operations.db") 
-    print("   - comparison_test.db")
-    print("   - long_conversation_test.db")
-
+        print(f"⚠️ Erro nos testes: {e}")
 
 if __name__ == "__main__":
-    # Executa exemplo simplificado primeiro
-    exemplo_simples()
-    
     print("\n" + "="*60)
     # Para usar com API real, descomente as linhas abaixo:
-    asyncio.run(main())
+    if len(sys.argv) > 1:
+        modo = sys.argv[1].lower()
+        
+        if modo == "simple":
+            asyncio.run(run_simple_tests())
+        elif modo == "complete":
+            asyncio.run(run_complete_tests())
+        else:
+            print("❌ Modo inválido. Use: simples, completo, database, ou memoria")
+    else:
+        # Padrão: executa testes simples
+        asyncio.run(run_simple_tests())
